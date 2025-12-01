@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useLycees } from '../hooks/useLycees';
+import { useNavigate } from 'react-router-dom';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -176,15 +177,46 @@ const Link = styled.a`
   &:hover { text-decoration: underline; }
 `;
 
+const LogoutButton = styled.button`
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+`;
+
 const AccueilScoolize = () => {
   const { lycees: lyceesDisponibles, loading } = useLycees();
+  const navigate = useNavigate();
   const [mode, setMode] = useState('inscription');
   const [data, setData] = useState({ email: '', nom: '', prenom: '', dateNaissance: '', etablissementOrigine: '', motDePasse: '' });
   const [search, setSearch] = useState('');
   const [show, setShow] = useState(false);
   const [filtered, setFiltered] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const update = (e) => setData({ ...data, [e.target.name]: e.target.value });
+  useEffect(() => {
+    // check si user déjà connecté
+    const userData = localStorage.getItem('scoolize_user');
+    if (userData) {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const update = (e) => {
+    const { name, value } = e.target;
+    setData({ ...data, [name]: value });
+  };
 
   const searchLycee = (e) => {
     const val = e.target.value;
@@ -215,7 +247,29 @@ const AccueilScoolize = () => {
 
   const submit = (e) => {
     e.preventDefault();
-    console.log(mode === 'inscription' ? '📝 Inscription:' : '🔐 Connexion:', data);
+    
+    // TODO: ajouter vraie validation côté serveur plus tard
+    const userData = {
+      nom: data.nom,
+      prenom: data.prenom,
+      email: data.email,
+      dateNaissance: data.dateNaissance,
+      etablissementOrigine: data.etablissementOrigine,
+    };
+    
+    localStorage.setItem('scoolize_user', JSON.stringify(userData));
+    setIsLoggedIn(true);
+    
+    navigate('/notes');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('scoolize_user');
+    setIsLoggedIn(false);
+    setData({ email: '', nom: '', prenom: '', dateNaissance: '', etablissementOrigine: '', motDePasse: '' });
+    setSearch('');
+    setShow(false);
+    setMode('inscription');
   };
 
   return (
@@ -260,6 +314,12 @@ const AccueilScoolize = () => {
               <>Pas encore de compte ? <Link onClick={() => switchMode('inscription')}>Inscrivez-vous</Link></>
             )}
           </Footer>
+
+          {isLoggedIn && (
+            <LogoutButton onClick={handleLogout}>
+              Se déconnecter
+            </LogoutButton>
+          )}
         </Card>
       </Main>
     </PageContainer>
