@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import Papa from 'papaparse';
 
 export const useLycees = () => {
     const [lycees, setLycees] = useState([]);
@@ -8,29 +7,16 @@ export const useLycees = () => {
     useEffect(() => {
         const loadLycees = async () => {
             try {
-                const response = await fetch('/data/parcoursup.csv');
-                const csvText = await response.text();
+                const response = await fetch('/data/lycees.csv');
+                const text = await response.text();
 
-                Papa.parse(csvText, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: (results) => {
-                        const etablissements = new Set();
-                        results.data.forEach(row => {
-                            const nom = row["Nom de l'établissement"];
-                            if (nom && nom.trim() && nom.length > 3) {
-                                const cleaned = nom.trim().replace(/^"|"$/g, '');
-                                if (cleaned && !cleaned.startsWith(',')) {
-                                    etablissements.add(cleaned);
-                                }
-                            }
-                        });
-                        const lyceesArray = Array.from(etablissements).sort();
-                        console.log(`✅ ${lyceesArray.length} établissements chargés depuis le CSV`);
-                        setLycees(lyceesArray);
-                        setLoading(false);
-                    }
-                });
+                const lines = text.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+
+                console.log(`✅ ${lines.length} lycées chargés depuis le CSV`);
+                setLycees(lines);
+                setLoading(false);
             } catch (error) {
                 console.error('Erreur lors du chargement des lycées:', error);
                 setLoading(false);
