@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useLycees } from '../hooks/useLycees';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -204,9 +205,10 @@ const AccueilScoolize = () => {
   const [show, setShow] = useState(false);
   const [filtered, setFiltered] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    // check si user déjà connecté
     const userData = localStorage.getItem('scoolize_user');
     if (userData) {
       setIsLoggedIn(true);
@@ -245,25 +247,87 @@ const AccueilScoolize = () => {
     }
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    
-    // TODO: ajouter vraie validation côté serveur plus tard
-    const userData = {
-      nom: data.nom,
-      prenom: data.prenom,
-      email: data.email,
-      dateNaissance: data.dateNaissance,
-      etablissementOrigine: data.etablissementOrigine,
-    };
-    
-    localStorage.setItem('scoolize_user', JSON.stringify(userData));
-    setIsLoggedIn(true);
-    
-    navigate('/notes');
+    setErrorMessage('');
+    setLoadingSubmit(true);
+
+    try {
+      if (mode === 'inscription') {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.motDePasse,
+        });
+
+        if (signUpError) {
+          console.error('Erreur inscription Supabase', signUpError);
+          setErrorMessage(signUpError.message || "Impossible de créer le compte.");
+          setLoadingSubmit(false);
+          return;
+        }
+
+        const user = signUpData.user;
+        if (!user) {
+          setErrorMessage("Compte créé, mais utilisateur non disponible. Vérifie ton email de confirmation.");
+          setLoadingSubmit(false);
+          return;
+        }
+
+        const { error: insertError } = await supabase
+          .from('etudiants')
+          .insert([{
+            id: user.id,
+            email: data.email,
+            nom: data.nom,
+            prenom: data.prenom,
+            date_naissance: data.dateNaissance || null,
+            lycee_origine: data.etablissementOrigine || null,
+          }]);
+
+        if (insertError) {
+          console.error('Erreur insertion profil etudiant', insertError);
+          setErrorMessage(insertError.message || "Compte créé mais le profil n'a pas pu être enregistré.");
+          setLoadingSubmit(false);
+          return;
+        }
+
+        localStorage.setItem('scoolize_user', JSON.stringify({
+          email: data.email,
+          nom: data.nom,
+          prenom: data.prenom,
+        }));
+
+        setIsLoggedIn(true);
+        navigate('/notes');
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.motDePasse,
+        });
+
+        if (signInError) {
+          console.error('Erreur connexion Supabase', signInError);
+          setErrorMessage(signInError.message || "Email ou mot de passe invalide.");
+          setLoadingSubmit(false);
+          return;
+        }
+
+        localStorage.setItem('scoolize_user', JSON.stringify({
+          email: data.email,
+        }));
+        setIsLoggedIn(true);
+        navigate('/notes');
+      }
+    } catch (err) {
+      console.error('Erreur inattendue inscription/connexion', err);
+      setErrorMessage("Une erreur inattendue est survenue. Réessaie plus tard.");
+    } finally {
+      setLoadingSubmit(false);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('scoolize_user');
     setIsLoggedIn(false);
     setData({ email: '', nom: '', prenom: '', dateNaissance: '', etablissementOrigine: '', motDePasse: '' });
@@ -304,8 +368,18 @@ const AccueilScoolize = () => {
             )}
             <Field><Label>Email</Label><Input type="email" name="email" value={data.email} onChange={update} placeholder="marie.dupont@exemple.fr" required /></Field>
             <Field><Label>Mot de passe</Label><Input type="password" name="motDePasse" value={data.motDePasse} onChange={update} placeholder="••••••••" required /></Field>
-            <Button type="submit">{mode === 'inscription' ? 'Créer mon compte' : 'Se connecter'}</Button>
+            <Button type="submit" disabled={loadingSubmit}>
+              {loadingSubmit
+                ? (mode === 'inscription' ? 'Création en cours...' : 'Connexion en cours...')
+                : (mode === 'inscription' ? 'Créer mon compte' : 'Se connecter')}
+            </Button>
           </Form>
+
+          {errorMessage && (
+            <Footer style={{ color: '#e11d48' }}>
+              {errorMessage}
+            </Footer>
+          )}
 
           <Footer>
             {mode === 'inscription' ? (

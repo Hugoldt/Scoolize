@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 import { useLycees } from '../hooks/useLycees';
+import { getEtudiantFromLocal } from '../utils/etudiant';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -221,34 +223,70 @@ const MesVoeux = () => {
   const { lycees: etablissementsDisponibles } = useLycees();
   const [form, setForm] = useState({
     formation: '',
-    etablissement: '',
-    ville: '',
     priorite: '1',
   });
   const [voeux, setVoeux] = useState([]);
+
+  useEffect(() => {
+    const loadVoeux = async () => {
+      const etudiant = await getEtudiantFromLocal();
+      if (!etudiant) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('voeux')
+        .select('*')
+        .eq('etudiant_id', etudiant.id)
+        .order('id', { ascending: true });
+
+      if (!error && data) setVoeux(data);
+    };
+    loadVoeux();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.formation || !form.etablissement) {
-      return; // minimum requis
+    if (!form.formation) {
+      return;
     }
-    setVoeux(prev => [...prev, form]);
-    // reset form
-    setForm({
-      formation: '',
-      etablissement: '',
-      ville: '',
-      priorite: '1',
-    });
+
+    const etudiant = await getEtudiantFromLocal();
+    if (!etudiant) {
+      alert("Vous devez être connecté pour ajouter un vœu (inscris-toi ou reconnecte-toi sur la page d'accueil).");
+      return;
+    }
+
+    const newVoeu = {
+      etudiant_id: etudiant.id,
+      formation_nom: form.formation,
+      classement_voeux: parseInt(form.priorite, 10),
+    };
+
+    const { data, error } = await supabase
+      .from('voeux')
+      .insert([newVoeu])
+      .select();
+
+    if (!error && data) {
+      setVoeux(prev => [...prev, data[0]]);
+      setForm({
+        formation: '',
+        priorite: '1',
+      });
+    }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('scoolize_user');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+    }
     navigate('/');
   };
 
@@ -262,8 +300,8 @@ const MesVoeux = () => {
           <NavButton $active>Mes vœux</NavButton>
           <NavButton as="a" href="/profil">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="6" r="3" fill="currentColor"/>
-              <path d="M2 14c0-2.5 2.5-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+              <circle cx="8" cy="6" r="3" fill="currentColor" />
+              <path d="M2 14c0-2.5 2.5-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
             </svg>
             Profil
           </NavButton>
@@ -274,7 +312,7 @@ const MesVoeux = () => {
         <Card>
           <Title>Mes vœux</Title>
           <Subtitle>
-            Ajoute les formations que tu vises, avec l’établissement et la ville. Tu pourras ensuite les relier à ton profil de notes.
+            Ajoute les formations que tu vises et leur priorité. Ces données sont synchronisées avec ta table Supabase `voeux`.
           </Subtitle>
 
           <Form onSubmit={handleSubmit}>
@@ -288,36 +326,7 @@ const MesVoeux = () => {
               />
             </Field>
 
-            <Field>
-              <Label>Établissement</Label>
-              <Select
-                name="etablissement"
-                value={form.etablissement}
-                onChange={handleChange}
-              >
-                <option value="">Choisir un établissement</option>
-                {etablissementsDisponibles.slice(0, 300).map((e, i) => (
-                  <option key={i} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </Select>
-              <Small>
-                Liste issue des établissements Parcoursup (limitée aux premiers résultats pour rester lisible).
-              </Small>
-            </Field>
-
-            <Field>
-              <Label>Ville</Label>
-              <Input
-                name="ville"
-                value={form.ville}
-                onChange={handleChange}
-                placeholder="Ex : Lyon"
-              />
-              <Small>Optionnel mais utile pour filtrer tes vœux par localisation.</Small>
-            </Field>
-
+            
             <Field>
               <Label>Priorité</Label>
               <Select
@@ -350,18 +359,18 @@ const MesVoeux = () => {
               <>
                 <TableHeader>
                   <span>Formation</span>
-                  <span>Établissement</span>
-                  <span>Ville</span>
                   <span>Priorité</span>
+                  <span>Match Parcoursup ?</span>
+                  <span>ID formation</span>
                 </TableHeader>
                 {voeux.map((v, i) => (
                   <TableRow key={i}>
-                    <span>{v.formation}</span>
-                    <span>{v.etablissement}</span>
-                    <span>{v.ville || '-'}</span>
+                    <span>{v.formation_nom}</span>
                     <span>
-                      <Pill>#{v.priorite}</Pill>
+                      <Pill>#{v.classement_voeux}</Pill>
                     </span>
+                    <span>{v.is_match ? 'Oui' : 'Non'}</span>
+                    <span>{v.formation_id || '-'}</span>
                   </TableRow>
                 ))}
               </>

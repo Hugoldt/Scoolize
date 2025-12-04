@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+import { getLocalUser } from '../utils/etudiant';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -205,28 +207,32 @@ const Profil = () => {
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
-    // récupère les données user depuis localStorage
-    const savedData = localStorage.getItem('scoolize_user');
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        setUserData(parsed);
-      } catch (err) {
-        console.error('erreur parse user data', err);
-        // fallback si pb de parse
+    const getProfile = async () => {
+      const user = getLocalUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('etudiants')
+        .select('*')
+        .eq('email', user.email)
+        .single();
+
+      if (!error && data) {
         setUserData({
-          nom: '',
-          prenom: '',
-          email: '',
-          dateNaissance: '',
-          etablissementOrigine: '',
+          nom: data.nom,
+          prenom: data.prenom,
+          email: data.email || user.email,
+          dateNaissance: data.date_naissance,
+          etablissementOrigine: data.lycee_origine,
         });
       }
-    }
+    };
+
+    getProfile();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('scoolize_user');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate('/');
   };
 
@@ -300,10 +306,10 @@ const Profil = () => {
               <InfoValue>
                 {userData.dateNaissance
                   ? new Date(userData.dateNaissance + 'T00:00:00').toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })
                   : 'Non renseigné'}
               </InfoValue>
             </InfoCard>

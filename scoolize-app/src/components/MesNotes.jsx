@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+import { getEtudiantFromLocal } from '../utils/etudiant';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -232,32 +234,43 @@ const MesNotes = () => {
   const [lycees, setLycees] = useState([]);
   const [form, setForm] = useState({
     niveau: 'terminale',
-    etablissement: '',
     matiere: '',
     note: '',
+    annee: new Date().getFullYear().toString(),
   });
   const [notes, setNotes] = useState([]);
 
   useEffect(() => {
-    // charge la liste des lycées depuis le CSV
-    const loadLycees = async () => {
+    const loadData = async () => {
       try {
         const res = await fetch('/data/lycees.csv');
         const txt = await res.text();
         const lignes = txt.split('\n')
           .map(l => l.trim())
           .filter(l => l && !l.startsWith('#'));
-        
-        // enlever les doublons et trier
-        const uniques = [...new Set(lignes)].sort((a, b) => 
+
+        const uniques = [...new Set(lignes)].sort((a, b) =>
           a.localeCompare(b, 'fr')
         );
         setLycees(uniques);
       } catch (err) {
         console.error('pb chargement lycées', err);
       }
+
+      const etudiant = await getEtudiantFromLocal();
+      if (!etudiant) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('etudiant_id', etudiant.id)
+        .order('created_at', { ascending: true });
+
+      if (!error && data) setNotes(data);
     };
-    loadLycees();
+    loadData();
   }, []);
 
   const handleChange = (e) => {
@@ -265,21 +278,40 @@ const MesNotes = () => {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.matiere || !form.note || !form.etablissement) {
-      return; // champs manquants
-    }
-    
-    // gérer virgule ou point pour la note
-    const noteValue = Number(form.note.replace(',', '.'));
-    if (isNaN(noteValue) || noteValue < 0 || noteValue > 20) {
-      return; // note invalide
+    if (!form.matiere || !form.note) {
+      return;
     }
 
-    setNotes(prev => [...prev, { ...form, note: noteValue.toFixed(2) }]);
-    // reset seulement matière et note
-    setForm(prev => ({ ...prev, matiere: '', note: '' }));
+    const noteValue = Number(form.note.replace(',', '.'));
+    if (isNaN(noteValue) || noteValue < 0 || noteValue > 20) {
+      return;
+    }
+
+    const etudiant = await getEtudiantFromLocal();
+    if (!etudiant) {
+      alert("Vous devez être connecté pour ajouter une note (inscris-toi ou reconnecte-toi sur la page d'accueil).");
+      return;
+    }
+
+    const newNote = {
+      etudiant_id: etudiant.id,
+      niveau_scolaire: form.niveau,
+      matiere: form.matiere,
+      note: noteValue,
+      annee_scolaire: parseInt(form.annee, 10) || null,
+    };
+
+    const { data, error } = await supabase
+      .from('notes')
+      .insert([newNote])
+      .select();
+
+    if (!error && data) {
+      setNotes(prev => [...prev, data[0]]);
+      setForm(prev => ({ ...prev, matiere: '', note: '' }));
+    }
   };
 
   const getNoteStatus = (note) => {
@@ -289,8 +321,11 @@ const MesNotes = () => {
     return { good: false, medium: false };
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('scoolize_user');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+    }
     navigate('/');
   };
 
@@ -304,8 +339,8 @@ const MesNotes = () => {
           <NavButton as="a" href="/voeux">Mes vœux</NavButton>
           <NavButton as="a" href="/profil">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="6" r="3" fill="currentColor"/>
-              <path d="M2 14c0-2.5 2.5-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+              <circle cx="8" cy="6" r="3" fill="currentColor" />
+              <path d="M2 14c0-2.5 2.5-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
             </svg>
             Profil
           </NavButton>
@@ -333,20 +368,16 @@ const MesNotes = () => {
             </Field>
 
             <Field>
-              <Label>Établissement</Label>
-              <Select
-                name="etablissement"
-                value={form.etablissement}
+              <Label>Année scolaire</Label>
+              <Input
+                type="number"
+                name="annee"
+                value={form.annee}
                 onChange={handleChange}
-              >
-                <option value="">Choisir ton lycée</option>
-                {lycees.slice(0, 200).map((l, i) => (
-                  <option key={i} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </Select>
-              <Small>Sélectionne ton lycée dans la liste (liste limitée aux premiers résultats).</Small>
+                min="2000"
+                max="2100"
+              />
+              <Small>Année scolaire associée à cette note (ex : {new Date().getFullYear()}).</Small>
             </Field>
 
             <Field>
@@ -400,7 +431,7 @@ const MesNotes = () => {
               <>
                 <TableHeader>
                   <span>Niveau</span>
-                  <span>Établissement</span>
+                  <span>Année</span>
                   <span>Matière</span>
                   <span>Note</span>
                 </TableHeader>
@@ -409,9 +440,9 @@ const MesNotes = () => {
                   return (
                     <TableRow key={i}>
                       <span>
-                        <Pill>Terminale</Pill>
+                        <Pill>{n.niveau_scolaire || 'Terminale'}</Pill>
                       </span>
-                      <span>{n.etablissement}</span>
+                      <span>{n.annee_scolaire || '-'}</span>
                       <span>{n.matiere}</span>
                       <span>
                         <NotePill $good={status.good} $medium={status.medium}>
