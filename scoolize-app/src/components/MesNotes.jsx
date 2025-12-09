@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { getEtudiantFromLocal } from '../utils/etudiant';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -33,7 +32,8 @@ const Logo = styled.h1`
 
 const Nav = styled.nav`
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
+  align-items: center;
 `;
 
 const NavButton = styled.button`
@@ -229,6 +229,45 @@ const EmptyState = styled.div`
   color: #9ca3af;
 `;
 
+const ProfileButton = styled.button`
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(148, 163, 184, 0.1);
+  color: #e5e7eb;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+`;
+
+const Dropdown = styled.div`
+  position: absolute;
+  top: 52px;
+  right: 0;
+  background: #0b1224;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  min-width: 180px;
+  z-index: 20;
+`;
+
+const DropItem = styled.button`
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  cursor: pointer;
+  &:hover {
+    background: rgba(148, 163, 184, 0.1);
+  }
+`;
+
 const MesNotes = () => {
   const navigate = useNavigate();
   const [lycees, setLycees] = useState([]);
@@ -239,9 +278,13 @@ const MesNotes = () => {
     annee: new Date().getFullYear().toString(),
   });
   const [notes, setNotes] = useState([]);
+  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
+      const sessionRes = await supabase.auth.getSession();
+      setHasSession(!!sessionRes.data.session);
+
       try {
         const res = await fetch('/data/lycees.csv');
         const txt = await res.text();
@@ -254,21 +297,23 @@ const MesNotes = () => {
         );
         setLycees(uniques);
       } catch (err) {
-        console.error('pb chargement lycées', err);
       }
 
-      const etudiant = await getEtudiantFromLocal();
-      if (!etudiant) {
+      if (!sessionRes.data?.session) {
         return;
       }
+
+      const userId = sessionRes.data.session.user.id;
 
       const { data, error } = await supabase
         .from('notes')
         .select('*')
-        .eq('etudiant_id', etudiant.id)
+        .eq('etudiant_id', userId)
         .order('created_at', { ascending: true });
 
-      if (!error && data) setNotes(data);
+      if (!error && data) {
+        setNotes(data);
+      }
     };
     loadData();
   }, []);
@@ -289,14 +334,16 @@ const MesNotes = () => {
       return;
     }
 
-    const etudiant = await getEtudiantFromLocal();
-    if (!etudiant) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
       alert("Vous devez être connecté pour ajouter une note (inscris-toi ou reconnecte-toi sur la page d'accueil).");
       return;
     }
 
+    const userId = sessionData.session.user.id;
+
     const newNote = {
-      etudiant_id: etudiant.id,
+      etudiant_id: userId,
       niveau_scolaire: form.niveau,
       matiere: form.matiere,
       note: noteValue,
@@ -308,7 +355,12 @@ const MesNotes = () => {
       .insert([newNote])
       .select();
 
-    if (!error && data) {
+    if (error) {
+      alert(`Erreur lors de l'ajout de la note: ${error.message}`);
+      return;
+    }
+
+    if (data && data.length > 0) {
       setNotes(prev => [...prev, data[0]]);
       setForm(prev => ({ ...prev, matiere: '', note: '' }));
     }
@@ -329,21 +381,28 @@ const MesNotes = () => {
     navigate('/');
   };
 
+  const [showMenu, setShowMenu] = useState(false);
+  const toggleMenu = () => setShowMenu(p => !p);
+  const closeMenu = () => setShowMenu(false);
+
   return (
     <PageContainer>
       <Header>
         <Logo>Scool<span>ize</span></Logo>
         <Nav>
-          <NavButton onClick={handleLogout}>Déconnexion</NavButton>
           <NavButton $active>Mes notes</NavButton>
           <NavButton as="a" href="/voeux">Mes vœux</NavButton>
-          <NavButton as="a" href="/profil">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="6" r="3" fill="currentColor" />
-              <path d="M2 14c0-2.5 2.5-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-            </svg>
-            Profil
-          </NavButton>
+          <NavButton as="a" href="/profil">Profil</NavButton>
+          {hasSession && (
+            <div style={{ position: 'relative' }}>
+              <ProfileButton onClick={toggleMenu}>P</ProfileButton>
+              {showMenu && (
+                <Dropdown>
+                  <DropItem onClick={handleLogout}>Se déconnecter</DropItem>
+                </Dropdown>
+              )}
+            </div>
+          )}
         </Nav>
       </Header>
 

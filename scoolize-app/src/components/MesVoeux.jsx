@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useLycees } from '../hooks/useLycees';
-import { getEtudiantFromLocal } from '../utils/etudiant';
+import { useEtablissements } from '../hooks/useEtablissements';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -34,7 +34,8 @@ const Logo = styled.h1`
 
 const Nav = styled.nav`
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
+  align-items: center;
 `;
 
 const NavButton = styled.button`
@@ -182,21 +183,58 @@ const TableWrapper = styled.div`
 
 const TableHeader = styled.div`
   display: grid;
-  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr;
+  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr auto;
+  gap: 1rem;
   padding: 0.85rem 1.2rem;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   background: rgba(15, 23, 42, 0.95);
   color: #9ca3af;
+  align-items: center;
+`;
+
+const RefreshButton = styled.button`
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.1);
+  color: #60a5fa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover {
+    background: rgba(37, 99, 235, 0.2);
+    border-color: rgba(37, 99, 235, 0.5);
+  }
+`;
+
+const StatusBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: ${p => 
+    p.$status === 'Accepté' ? 'rgba(34, 197, 94, 0.2)' :
+    p.$status === 'Refusé' ? 'rgba(239, 68, 68, 0.2)' :
+    'rgba(148, 163, 184, 0.2)'};
+  color: ${p => 
+    p.$status === 'Accepté' ? '#22c55e' :
+    p.$status === 'Refusé' ? '#ef4444' :
+    '#94a3b8'};
 `;
 
 const TableRow = styled.div`
   display: grid;
-  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr;
+  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr auto;
+  gap: 1rem;
   padding: 0.85rem 1.2rem;
   font-size: 0.9rem;
   border-top: 1px solid rgba(31, 41, 55, 0.8);
+  align-items: center;
   &:nth-child(even) {
     background: rgba(15, 23, 42, 0.7);
   }
@@ -218,52 +256,260 @@ const EmptyState = styled.div`
   color: #9ca3af;
 `;
 
+const AutocompleteWrapper = styled.div`
+  position: relative;
+`;
+
+const AutocompleteList = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #0b1224;
+  border: 1px solid #4b5563;
+  border-radius: 0.6rem;
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+`;
+
+const AutocompleteItem = styled.div`
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  color: #e5e7eb;
+  font-size: 0.95rem;
+  transition: background 0.15s ease;
+  &:hover {
+    background: rgba(37, 99, 235, 0.2);
+  }
+  &:first-child {
+    border-top-left-radius: 0.6rem;
+    border-top-right-radius: 0.6rem;
+  }
+  &:last-child {
+    border-bottom-left-radius: 0.6rem;
+    border-bottom-right-radius: 0.6rem;
+  }
+`;
+
+const ProfileButton = styled.button`
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(148, 163, 184, 0.1);
+  color: #e5e7eb;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+`;
+
+const Dropdown = styled.div`
+  position: absolute;
+  top: 52px;
+  right: 0;
+  background: #0b1224;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  min-width: 180px;
+  z-index: 20;
+`;
+
+const DropItem = styled.button`
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  cursor: pointer;
+  &:hover {
+    background: rgba(148, 163, 184, 0.1);
+  }
+`;
+
 const MesVoeux = () => {
   const navigate = useNavigate();
   const { lycees: etablissementsDisponibles } = useLycees();
+  const { etablissements: etablissementsSuperieur, loading: loadingEtablissements } = useEtablissements();
   const [form, setForm] = useState({
     formation: '',
+    ecole_id: '',
+    ecole_nom: '',
     priorite: '1',
   });
   const [voeux, setVoeux] = useState([]);
+  const [ecoles, setEcoles] = useState([]);
+  const [hasSession, setHasSession] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [searchEcole, setSearchEcole] = useState('');
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [filteredEtablissements, setFilteredEtablissements] = useState([]);
+  const toggleMenu = () => setShowMenu(p => !p);
+  const closeMenu = () => setShowMenu(false);
+
+  const loadVoeux = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      return;
+    }
+
+    const userId = sessionData.session.user.id;
+    
+    const { data, error } = await supabase
+      .from('voeux')
+      .select('*, ecoles(nom_ecole, formation)')
+      .eq('etudiant_id', userId)
+      .order('id', { ascending: true });
+
+    if (!error && data) {
+      setVoeux(data);
+    }
+  };
 
   useEffect(() => {
-    const loadVoeux = async () => {
-      const etudiant = await getEtudiantFromLocal();
-      if (!etudiant) {
-        return;
+    const loadData = async () => {
+      const sessionRes = await supabase.auth.getSession();
+      setHasSession(!!sessionRes.data.session);
+
+      const { data: ecolesData, error: ecolesError } = await supabase
+        .from('ecoles')
+        .select('id, nom_ecole, formation')
+        .order('nom_ecole', { ascending: true });
+
+      if (!ecolesError && ecolesData) {
+        setEcoles(ecolesData);
       }
 
-      const { data, error } = await supabase
-        .from('voeux')
-        .select('*')
-        .eq('etudiant_id', etudiant.id)
-        .order('id', { ascending: true });
-
-      if (!error && data) setVoeux(data);
+      await loadVoeux();
     };
-    loadVoeux();
+    loadData();
+
+    const interval = setInterval(() => {
+      loadVoeux();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showAutocomplete && !e.target.closest('.autocomplete-wrapper')) {
+        setShowAutocomplete(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showAutocomplete]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  const searchEtablissement = (e) => {
+    const val = e.target.value;
+    setSearchEcole(val);
+    setForm(prev => ({ ...prev, ecole_nom: val, ecole_id: '' }));
+    
+    if (val.length > 0) {
+      const filtered = etablissementsSuperieur.filter(etab => 
+        etab.toLowerCase().includes(val.toLowerCase())
+      ).slice(0, 10);
+      setFilteredEtablissements(filtered);
+      setShowAutocomplete(true);
+    } else {
+      setFilteredEtablissements([]);
+      setShowAutocomplete(false);
+    }
+  };
+
+  const selectEtablissement = async (nomEtablissement) => {
+    setSearchEcole(nomEtablissement);
+    setForm(prev => ({ ...prev, ecole_nom: nomEtablissement }));
+    setShowAutocomplete(false);
+
+      const nomEtablissementLower = nomEtablissement.toLowerCase().trim();
+      const ecoleExistante = ecoles.find(e => {
+        if (!e.nom_ecole) return false;
+        const nomEcoleLower = e.nom_ecole.toLowerCase().trim();
+        
+        if (nomEcoleLower === nomEtablissementLower) return true;
+        
+        if (nomEcoleLower.includes(nomEtablissementLower) || 
+            nomEtablissementLower.includes(nomEcoleLower)) return true;
+        
+        const motsEcole = nomEcoleLower.split(/\s+/).filter(m => m.length > 2);
+        const motsEtablissement = nomEtablissementLower.split(/\s+/).filter(m => m.length > 2);
+        
+        const motsCommuns = motsEcole.filter(m => motsEtablissement.includes(m));
+        if (motsCommuns.length >= 2) return true;
+        
+        return false;
+      });
+
+      if (ecoleExistante) {
+        setForm(prev => ({ ...prev, ecole_id: ecoleExistante.id }));
+      } else {
+        setForm(prev => ({ ...prev, ecole_id: '' }));
+      }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.formation) {
+    if (!form.formation || !form.ecole_nom) {
+      alert("Veuillez remplir tous les champs requis.");
       return;
     }
 
-    const etudiant = await getEtudiantFromLocal();
-    if (!etudiant) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    
+    if (!sessionData?.session) {
       alert("Vous devez être connecté pour ajouter un vœu (inscris-toi ou reconnecte-toi sur la page d'accueil).");
       return;
     }
 
+    const userId = sessionData.session.user.id;
+    const etudiantId = userId;
+
+    let ecoleId = form.ecole_id;
+    
+    if (!ecoleId) {
+      const nomFormLower = form.ecole_nom.toLowerCase().trim();
+      const ecoleExistante = ecoles.find(e => {
+        if (!e.nom_ecole) return false;
+        const nomEcoleLower = e.nom_ecole.toLowerCase().trim();
+        
+        if (nomEcoleLower === nomFormLower) return true;
+        
+        if (nomEcoleLower.includes(nomFormLower) || 
+            nomFormLower.includes(nomEcoleLower)) return true;
+        
+        const motsEcole = nomEcoleLower.split(/\s+/).filter(m => m.length > 2);
+        const motsForm = nomFormLower.split(/\s+/).filter(m => m.length > 2);
+        
+        const motsCommuns = motsEcole.filter(m => motsForm.includes(m));
+        if (motsCommuns.length >= 2) return true;
+        
+        return false;
+      });
+      
+      if (ecoleExistante) {
+        ecoleId = ecoleExistante.id;
+      } else {
+        alert("Cette école n'est pas encore inscrite sur la plateforme. Veuillez sélectionner une école inscrite.");
+        return;
+      }
+    }
+
     const newVoeu = {
-      etudiant_id: etudiant.id,
+      etudiant_id: etudiantId,
+      ecole_id: ecoleId,
       formation_nom: form.formation,
       classement_voeux: parseInt(form.priorite, 10),
     };
@@ -271,15 +517,23 @@ const MesVoeux = () => {
     const { data, error } = await supabase
       .from('voeux')
       .insert([newVoeu])
-      .select();
+      .select('*, ecoles(nom_ecole, formation)');
 
     if (!error && data) {
       setVoeux(prev => [...prev, data[0]]);
       setForm({
         formation: '',
+        ecole_id: '',
+        ecole_nom: '',
         priorite: '1',
       });
+      setSearchEcole('');
+      setShowAutocomplete(false);
+    } else {
+      alert("Erreur lors de l'ajout du vœu. Vérifie que l'école est bien inscrite.");
     }
+    
+    await loadVoeux();
   };
 
   const handleLogout = async () => {
@@ -295,16 +549,19 @@ const MesVoeux = () => {
       <Header>
         <Logo>Scool<span>ize</span></Logo>
         <Nav>
-          <NavButton onClick={handleLogout}>Déconnexion</NavButton>
           <NavButton as="a" href="/notes">Mes notes</NavButton>
           <NavButton $active>Mes vœux</NavButton>
-          <NavButton as="a" href="/profil">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="6" r="3" fill="currentColor" />
-              <path d="M2 14c0-2.5 2.5-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-            </svg>
-            Profil
-          </NavButton>
+          <NavButton as="a" href="/profil">Profil</NavButton>
+          {hasSession && (
+            <div style={{ position: 'relative' }}>
+              <ProfileButton onClick={toggleMenu}>P</ProfileButton>
+              {showMenu && (
+                <Dropdown>
+                  <DropItem onClick={handleLogout}>Se déconnecter</DropItem>
+                </Dropdown>
+              )}
+            </div>
+          )}
         </Nav>
       </Header>
 
@@ -317,15 +574,54 @@ const MesVoeux = () => {
 
           <Form onSubmit={handleSubmit}>
             <Field>
+              <Label>École</Label>
+              <AutocompleteWrapper className="autocomplete-wrapper">
+                <Input
+                  type="text"
+                  value={searchEcole}
+                  onChange={searchEtablissement}
+                  onFocus={() => {
+                    if (searchEcole.length > 0 && filteredEtablissements.length > 0) {
+                      setShowAutocomplete(true);
+                    }
+                  }}
+                  placeholder={loadingEtablissements ? "Chargement des établissements..." : "Tapez le nom de l'établissement..."}
+                  required
+                  disabled={loadingEtablissements}
+                />
+                {showAutocomplete && filteredEtablissements.length > 0 && (
+                  <AutocompleteList>
+                    {filteredEtablissements.map((etab, idx) => (
+                      <AutocompleteItem
+                        key={idx}
+                        onClick={() => selectEtablissement(etab)}
+                      >
+                        {etab}
+                      </AutocompleteItem>
+                    ))}
+                  </AutocompleteList>
+                )}
+              </AutocompleteWrapper>
+              <Small>
+                Sélectionne l'école à laquelle tu souhaites postuler.
+                {form.ecole_nom && (
+                  ecoles.find(e => e.nom_ecole.toLowerCase() === form.ecole_nom.toLowerCase()) 
+                    ? ' École inscrite' 
+                    : ' Cette école doit être inscrite sur la plateforme'
+                )}
+              </Small>
+            </Field>
+
+            <Field>
               <Label>Nom de la formation</Label>
               <Input
                 name="formation"
                 value={form.formation}
                 onChange={handleChange}
                 placeholder="Ex : Licence Économie-Gestion"
+                required
               />
             </Field>
-
             
             <Field>
               <Label>Priorité</Label>
@@ -358,19 +654,27 @@ const MesVoeux = () => {
             ) : (
               <>
                 <TableHeader>
+                  <span>École</span>
                   <span>Formation</span>
                   <span>Priorité</span>
-                  <span>Match Parcoursup ?</span>
-                  <span>ID formation</span>
+                  <span>Statut</span>
+                  <RefreshButton onClick={loadVoeux} title="Rafraîchir">
+                    ↻
+                  </RefreshButton>
                 </TableHeader>
                 {voeux.map((v, i) => (
                   <TableRow key={i}>
+                    <span>{v.ecoles?.nom_ecole || '-'}</span>
                     <span>{v.formation_nom}</span>
                     <span>
                       <Pill>#{v.classement_voeux}</Pill>
                     </span>
-                    <span>{v.is_match ? 'Oui' : 'Non'}</span>
-                    <span>{v.formation_id || '-'}</span>
+                    <span>
+                      <StatusBadge $status={v.statut || 'En attente'}>
+                        {v.statut || 'En attente'}
+                      </StatusBadge>
+                    </span>
+                    <span></span>
                   </TableRow>
                 ))}
               </>

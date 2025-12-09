@@ -205,11 +205,17 @@ const LogoutButton = styled.button`
 const Profil = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
+  const [hasSession, setHasSession] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const toggleMenu = () => setShowMenu(p => !p);
 
   useEffect(() => {
     const getProfile = async () => {
       const user = getLocalUser();
       if (!user) return;
+
+      const sessionRes = await supabase.auth.getSession();
+      setHasSession(!!sessionRes.data.session);
 
       const { data, error } = await supabase
         .from('etudiants')
@@ -265,13 +271,45 @@ const Profil = () => {
       <Header>
         <Logo>Scool<span>ize</span></Logo>
         <Nav>
-          <NavButton as="a" href="/">Accueil</NavButton>
           <NavButton as="a" href="/notes">Mes notes</NavButton>
           <NavButton as="a" href="/voeux">Mes vœux</NavButton>
           <NavButton $active>
             <ProfileIcon $active />
             Profil
           </NavButton>
+          {hasSession && (
+            <div style={{ position: 'relative' }}>
+              <NavButton onClick={toggleMenu}>Profil</NavButton>
+              {showMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '44px',
+                  right: 0,
+                  background: '#0b1224',
+                  border: '1px solid rgba(148, 163, 184, 0.25)',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.25)',
+                  minWidth: '180px',
+                  zIndex: 20,
+                }}>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#e5e7eb',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Se déconnecter
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </Nav>
       </Header>
 
