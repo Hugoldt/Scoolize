@@ -19,7 +19,13 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "algo:demo": "ts-node src/domain/scoolizeAlgorithm.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   },
   "eslintConfig": {
     "extends": [

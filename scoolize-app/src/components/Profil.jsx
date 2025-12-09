@@ -1,86 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import NavBar from './NavBar';
 
 const PageContainer = styled.div`
   min-height: 100vh;
-  background: #0f172a;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
   display: flex;
   flex-direction: column;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #e5e7eb;
-`;
-
-const Header = styled.header`
-  padding: 1.5rem 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(15, 23, 42, 0.9);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
-  backdrop-filter: blur(10px);
-`;
-
-const Logo = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #f9fafb;
-  margin: 0;
-  span { color: #60a5fa; }
-`;
-
-const Nav = styled.nav`
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-`;
-
-const NavButton = styled.button`
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  border: none;
-  background: ${p => p.$active ? '#2563eb' : 'transparent'};
-  color: ${p => p.$active ? '#f9fafb' : '#e5e7eb'};
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  &:hover {
-    background: ${p => p.$active ? '#1d4ed8' : 'rgba(148, 163, 184, 0.25)'};
-  }
-`;
-
-const ProfileIcon = styled.div`
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: ${p => p.$active ? '#ffffff' : '#e5e7eb'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
   
   &::before {
     content: '';
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: ${p => p.$active ? '#2563eb' : '#9ca3af'};
-  }
-  
-  &::after {
-    content: '';
     position: absolute;
-    bottom: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 12px;
-    height: 6px;
-    border-radius: 0 0 12px 12px;
-    background: ${p => p.$active ? '#2563eb' : '#9ca3af'};
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(96, 165, 250, 0.08) 0%, transparent 50%);
+    pointer-events: none;
   }
 `;
 
@@ -89,16 +30,28 @@ const Main = styled.main`
   padding: 2rem 3rem 3rem;
   display: flex;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 `;
 
 const Card = styled.div`
-  background: #020617;
-  border-radius: 20px;
-  padding: 2rem 2.5rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  background: rgba(2, 6, 23, 0.95);
+  border-radius: 24px;
+  padding: 2.5rem 3rem;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(148, 163, 184, 0.2);
   width: 100%;
   max-width: 700px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 1;
+  
+  @media (max-width: 768px) {
+    padding: 2rem;
+    border-radius: 20px;
+  }
 `;
 
 const Title = styled.h2`
@@ -175,6 +128,25 @@ const InfoValue = styled.div`
   font-weight: 500;
 `;
 
+const Input = styled.input`
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.5);
+  color: #f9fafb;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  &::placeholder {
+    color: #64748b;
+  }
+`;
+
 const EmptyState = styled.div`
   padding: 2rem;
   text-align: center;
@@ -182,18 +154,55 @@ const EmptyState = styled.div`
   font-size: 0.95rem;
 `;
 
-const LogoutButton = styled.button`
-  margin-top: 2rem;
-  padding: 0.75rem 1.5rem;
+const Actions = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  margin: 1.5rem 0 1rem;
+  flex-wrap: wrap;
+`;
+
+const PrimaryButton = styled.button`
+  padding: 0.75rem 1.25rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
+  border: none;
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  color: #f9fafb;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.25);
+  }
+`;
+
+const SecondaryButton = styled.button`
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.6);
+  color: #e5e7eb;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  &:hover {
+    border-color: rgba(59, 130, 246, 0.6);
+    background: rgba(15, 23, 42, 0.8);
+  }
+`;
+
+const LogoutButton = styled.button`
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  font-weight: 700;
+  font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  width: 100%;
   &:hover {
     background: rgba(239, 68, 68, 0.2);
     border-color: rgba(239, 68, 68, 0.5);
@@ -201,8 +210,15 @@ const LogoutButton = styled.button`
 `;
 
 const Profil = () => {
-  const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
+  const [form, setForm] = useState({
+    nom: '',
+    prenom: '',
+    email: '',
+    dateNaissance: '',
+    etablissementOrigine: '',
+  });
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     // récupère les données user depuis localStorage
@@ -211,40 +227,67 @@ const Profil = () => {
       try {
         const parsed = JSON.parse(savedData);
         setUserData(parsed);
+        setForm({
+          nom: parsed.nom || '',
+          prenom: parsed.prenom || '',
+          email: parsed.email || '',
+          dateNaissance: parsed.dateNaissance || '',
+          etablissementOrigine: parsed.etablissementOrigine || '',
+        });
       } catch (err) {
         console.error('erreur parse user data', err);
         // fallback si pb de parse
-        setUserData({
+        const fallback = {
           nom: '',
           prenom: '',
           email: '',
           dateNaissance: '',
           etablissementOrigine: '',
-        });
+        };
+        setUserData(fallback);
+        setForm(fallback);
       }
+    } else {
+      const empty = {
+        nom: '',
+        prenom: '',
+        email: '',
+        dateNaissance: '',
+        etablissementOrigine: '',
+      };
+      setUserData(empty);
+      setForm(empty);
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('scoolize_user');
-    navigate('/');
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    const updated = { ...userData, ...form };
+    localStorage.setItem('scoolize_user', JSON.stringify(updated));
+    setUserData(updated);
+    setEditMode(false);
+  };
+
+  const handleCancel = () => {
+    setForm({
+      nom: userData?.nom || '',
+      prenom: userData?.prenom || '',
+      email: userData?.email || '',
+      dateNaissance: userData?.dateNaissance || '',
+      etablissementOrigine: userData?.etablissementOrigine || '',
+    });
+    setEditMode(false);
   };
 
   if (!userData) {
     return (
       <PageContainer>
-        <Header>
-          <Logo>Scool<span>ize</span></Logo>
-          <Nav>
-            <NavButton onClick={handleLogout}>Déconnexion</NavButton>
-            <NavButton as="a" href="/notes">Mes notes</NavButton>
-            <NavButton as="a" href="/voeux">Mes vœux</NavButton>
-            <NavButton $active>
-              <ProfileIcon $active />
-              Profil
-            </NavButton>
-          </Nav>
-        </Header>
+        <NavBar active="profil" />
         <Main>
           <Card>
             <EmptyState>Chargement de vos informations...</EmptyState>
@@ -256,18 +299,7 @@ const Profil = () => {
 
   return (
     <PageContainer>
-      <Header>
-        <Logo>Scool<span>ize</span></Logo>
-        <Nav>
-          <NavButton as="a" href="/">Accueil</NavButton>
-          <NavButton as="a" href="/notes">Mes notes</NavButton>
-          <NavButton as="a" href="/voeux">Mes vœux</NavButton>
-          <NavButton $active>
-            <ProfileIcon $active />
-            Profil
-          </NavButton>
-        </Nav>
-      </Header>
+      <NavBar active="profil" />
 
       <Main>
         <Card>
@@ -279,44 +311,111 @@ const Profil = () => {
             Consulte et gère les informations de ton compte Scoolize.
           </Subtitle>
 
-          <InfoGrid>
-            <InfoCard>
-              <InfoLabel>Nom</InfoLabel>
-              <InfoValue>{userData.nom || 'Non renseigné'}</InfoValue>
-            </InfoCard>
+          <Actions>
+            {editMode ? (
+              <>
+                <PrimaryButton onClick={handleSave}>Enregistrer</PrimaryButton>
+                <SecondaryButton type="button" onClick={handleCancel}>Annuler</SecondaryButton>
+              </>
+            ) : (
+              <SecondaryButton type="button" onClick={() => setEditMode(true)}>
+                Modifier mes informations
+              </SecondaryButton>
+            )}
+          </Actions>
 
-            <InfoCard>
-              <InfoLabel>Prénom</InfoLabel>
-              <InfoValue>{userData.prenom || 'Non renseigné'}</InfoValue>
-            </InfoCard>
+          <form onSubmit={handleSave}>
+            <InfoGrid>
+              <InfoCard>
+                <InfoLabel>Nom</InfoLabel>
+                {editMode ? (
+                  <Input
+                    name="nom"
+                    value={form.nom}
+                    onChange={handleChange}
+                    placeholder="Ton nom"
+                  />
+                ) : (
+                  <InfoValue>{userData.nom || 'Non renseigné'}</InfoValue>
+                )}
+              </InfoCard>
 
-            <InfoCard>
-              <InfoLabel>Email</InfoLabel>
-              <InfoValue>{userData.email || 'Non renseigné'}</InfoValue>
-            </InfoCard>
+              <InfoCard>
+                <InfoLabel>Prénom</InfoLabel>
+                {editMode ? (
+                  <Input
+                    name="prenom"
+                    value={form.prenom}
+                    onChange={handleChange}
+                    placeholder="Ton prénom"
+                  />
+                ) : (
+                  <InfoValue>{userData.prenom || 'Non renseigné'}</InfoValue>
+                )}
+              </InfoCard>
 
-            <InfoCard>
-              <InfoLabel>Date de naissance</InfoLabel>
-              <InfoValue>
-                {userData.dateNaissance
-                  ? new Date(userData.dateNaissance + 'T00:00:00').toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })
-                  : 'Non renseigné'}
-              </InfoValue>
-            </InfoCard>
+              <InfoCard>
+                <InfoLabel>Email</InfoLabel>
+                {editMode ? (
+                  <Input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="mon.email@example.com"
+                  />
+                ) : (
+                  <InfoValue>{userData.email || 'Non renseigné'}</InfoValue>
+                )}
+              </InfoCard>
 
-            <InfoCard>
-              <InfoLabel>Établissement d'origine</InfoLabel>
-              <InfoValue>{userData.etablissementOrigine || 'Non renseigné'}</InfoValue>
-            </InfoCard>
-          </InfoGrid>
+              <InfoCard>
+                <InfoLabel>Date de naissance</InfoLabel>
+                {editMode ? (
+                  <Input
+                    type="date"
+                    name="dateNaissance"
+                    value={form.dateNaissance}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <InfoValue>
+                    {userData.dateNaissance
+                      ? new Date(userData.dateNaissance + 'T00:00:00').toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                      : 'Non renseigné'}
+                  </InfoValue>
+                )}
+              </InfoCard>
 
-          <LogoutButton onClick={handleLogout}>
-            Se déconnecter
+              <InfoCard>
+                <InfoLabel>Établissement d'origine</InfoLabel>
+                {editMode ? (
+                  <Input
+                    name="etablissementOrigine"
+                    value={form.etablissementOrigine}
+                    onChange={handleChange}
+                    placeholder="Ton lycée ou établissement"
+                  />
+                ) : (
+                  <InfoValue>{userData.etablissementOrigine || 'Non renseigné'}</InfoValue>
+                )}
+              </InfoCard>
+            </InfoGrid>
+          </form>
+
+          <LogoutButton
+            onClick={() => {
+              localStorage.removeItem('scoolize_user');
+              window.location.href = '/';
+            }}
+          >
+            Déconnexion
           </LogoutButton>
+
         </Card>
       </Main>
     </PageContainer>

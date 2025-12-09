@@ -2,28 +2,29 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useLycees } from '../hooks/useLycees';
 import { useNavigate } from 'react-router-dom';
+import NavBar from './NavBar';
 
 const PageContainer = styled.div`
   min-height: 100vh;
-  background: #1e293b;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
   display: flex;
   flex-direction: column;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-`;
-
-const Header = styled.header`
-  padding: 2rem 4rem;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-`;
-
-const Logo = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0;
-  span { color: #60a5fa; }
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(96, 165, 250, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+  }
 `;
 
 const Main = styled.main`
@@ -32,38 +33,52 @@ const Main = styled.main`
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  position: relative;
+  z-index: 1;
 `;
 
 const Card = styled.div`
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 3rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: rgba(2, 6, 23, 0.95);
+  border-radius: 24px;
+  padding: 2.5rem 3rem;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(148, 163, 184, 0.2);
   width: 100%;
-  max-width: 450px;
-  @media (max-width: 768px) { padding: 2rem; }
+  max-width: 480px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 1;
+  
+  @media (max-width: 768px) { 
+    padding: 2rem;
+    border-radius: 20px;
+  }
 `;
 
 const Title = styled.h3`
-  font-size: 1.75rem;
+  font-size: 1.875rem;
   font-weight: 700;
-  color: #1a202c;
+  color: #f9fafb;
   margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
 `;
 
 const Subtitle = styled.p`
   font-size: 0.95rem;
-  color: #718096;
+  color: #9ca3af;
   margin: 0 0 2rem 0;
 `;
 
 const Tabs = styled.div`
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-bottom: 2rem;
-  background: #f7fafc;
+  background: rgba(15, 23, 42, 0.6);
   padding: 0.5rem;
   border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
 `;
 
 const Tab = styled.button`
@@ -71,13 +86,17 @@ const Tab = styled.button`
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: ${p => p.$active ? '#2563eb' : 'transparent'};
-  color: ${p => p.$active ? '#ffffff' : '#4a5568'};
-  &:hover { background: ${p => p.$active ? '#1d4ed8' : '#edf2f7'}; }
+  transition: all 0.2s ease;
+  background: ${p => p.$active ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'transparent'};
+  color: ${p => p.$active ? '#ffffff' : '#9ca3af'};
+  box-shadow: ${p => p.$active ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none'};
+  &:hover { 
+    background: ${p => p.$active ? 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)' : 'rgba(148, 163, 184, 0.25)'}; 
+    color: ${p => p.$active ? '#ffffff' : '#e5e7eb'};
+  }
 `;
 
 const Form = styled.form`
@@ -95,22 +114,28 @@ const Field = styled.div`
 const Label = styled.label`
   font-size: 0.9rem;
   font-weight: 600;
-  color: #2d3748;
+  color: #e5e7eb;
 `;
 
 const Input = styled.input`
-  padding: 0.875rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.2s ease;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid #4b5563;
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.15s ease;
   width: ${p => p.$full ? '100%' : 'auto'};
+  
   &:focus {
-    outline: none;
     border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
   }
-  &::placeholder { color: #a0aec0; }
+  &::placeholder { color: #6b7280; }
+  &:hover:not(:focus) {
+    border-color: #6b7280;
+  }
 `;
 
 const Autocomplete = styled.div`
@@ -122,59 +147,89 @@ const Suggestions = styled.ul`
   top: 100%;
   left: 0;
   right: 0;
-  background: #ffffff;
-  border: 2px solid #e2e8f0;
+  background: rgba(2, 6, 23, 0.98);
+  border: 1px solid #2563eb;
   border-top: none;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 10px 10px;
   max-height: 200px;
   overflow-y: auto;
   list-style: none;
-  padding: 0;
+  padding: 0.25rem 0;
   margin: 0;
   z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
 `;
 
 const Suggestion = styled.li`
   padding: 0.75rem 1rem;
   cursor: pointer;
-  color: #2d3748;
-  &:hover { background: #f7fafc; }
-  &:last-child { border-radius: 0 0 8px 8px; }
+  color: #e5e7eb;
+  transition: all 0.15s ease;
+  &:hover { 
+    background: rgba(37, 99, 235, 0.2);
+    color: #60a5fa;
+  }
+  &:last-child { border-radius: 0 0 10px 10px; }
 `;
 
 const Button = styled.button`
-  padding: 1rem;
-  background: #2563eb;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   border: none;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 700;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   margin-top: 0.5rem;
-  &:hover {
-    background: #1d4ed8;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
   }
-  &:active { transform: translateY(0); }
+  
+  &:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+    
+    &::before {
+      left: 100%;
+    }
+  }
+  &:active { 
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  }
 `;
 
 const Footer = styled.div`
   text-align: center;
   margin-top: 1.5rem;
   font-size: 0.9rem;
-  color: #718096;
+  color: #9ca3af;
 `;
 
 const Link = styled.a`
-  color: #2563eb;
+  color: #60a5fa;
   text-decoration: none;
   font-weight: 600;
   cursor: pointer;
-  &:hover { text-decoration: underline; }
+  transition: color 0.2s ease;
+  &:hover { 
+    color: #3b82f6;
+    text-decoration: underline; 
+  }
 `;
 
 const LogoutButton = styled.button`
@@ -274,7 +329,7 @@ const AccueilScoolize = () => {
 
   return (
     <PageContainer>
-      <Header><Logo>Scool<span>ize</span></Logo></Header>
+      <NavBar active="accueil" />
       <Main>
         <Card>
           <Title>{mode === 'inscription' ? 'Créer votre compte' : 'Connexion'}</Title>
@@ -320,6 +375,10 @@ const AccueilScoolize = () => {
               Se déconnecter
             </LogoutButton>
           )}
+
+          <Footer>
+            <Link onClick={() => navigate('/resultats')}>Voir la démo compatibilité</Link>
+          </Footer>
         </Card>
       </Main>
     </PageContainer>

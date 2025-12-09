@@ -1,52 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
 import { useLycees } from '../hooks/useLycees';
+import NavBar from './NavBar';
 
 const PageContainer = styled.div`
   min-height: 100vh;
-  background: #020617;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
   display: flex;
   flex-direction: column;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #e5e7eb;
-`;
-
-const Header = styled.header`
-  padding: 1.5rem 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(15, 23, 42, 0.95);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
-  backdrop-filter: blur(10px);
-`;
-
-const Logo = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #f9fafb;
-  margin: 0;
-  span { color: #60a5fa; }
-`;
-
-const Nav = styled.nav`
-  display: flex;
-  gap: 1rem;
-`;
-
-const NavButton = styled.button`
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  border: none;
-  background: ${p => p.$active ? '#2563eb' : 'transparent'};
-  color: ${p => p.$active ? '#f9fafb' : '#e5e7eb'};
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  &:hover {
-    background: ${p => p.$active ? '#1d4ed8' : 'rgba(148, 163, 184, 0.25)'};
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(96, 165, 250, 0.08) 0%, transparent 50%);
+    pointer-events: none;
   }
 `;
 
@@ -55,16 +31,28 @@ const Main = styled.main`
   padding: 2rem 3rem 3rem;
   display: flex;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 `;
 
 const Card = styled.div`
-  background: #020617;
-  border-radius: 20px;
-  padding: 2rem 2.5rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  background: rgba(2, 6, 23, 0.95);
+  border-radius: 24px;
+  padding: 2.5rem 3rem;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(148, 163, 184, 0.2);
   width: 100%;
   max-width: 900px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 1;
+  
+  @media (max-width: 768px) {
+    padding: 2rem;
+    border-radius: 20px;
+  }
 `;
 
 const Title = styled.h2`
@@ -147,10 +135,10 @@ const ButtonRow = styled.div`
 `;
 
 const Button = styled.button`
-  padding: 0.8rem 1.4rem;
+  padding: 0.8rem 1.6rem;
   border-radius: 0.75rem;
   border: none;
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #f9fafb;
   font-weight: 600;
   font-size: 0.95rem;
@@ -159,45 +147,79 @@ const Button = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  
   &:hover {
-    background: #1d4ed8;
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
   }
   &:active {
     transform: translateY(0);
-    box-shadow: none;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
   }
 `;
 
 const TableWrapper = styled.div`
   border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.3);
   overflow: hidden;
-  background: radial-gradient(circle at top left, rgba(37, 99, 235, 0.15), transparent),
-              #020617;
+  background: radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent),
+              rgba(2, 6, 23, 0.8);
+  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.1);
 `;
 
 const TableHeader = styled.div`
   display: grid;
-  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr;
+  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr 1fr;
   padding: 0.85rem 1.2rem;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   background: rgba(15, 23, 42, 0.95);
   color: #9ca3af;
+  gap: 1rem;
 `;
 
 const TableRow = styled.div`
   display: grid;
-  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr;
+  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr 1fr;
   padding: 0.85rem 1.2rem;
   font-size: 0.9rem;
   border-top: 1px solid rgba(31, 41, 55, 0.8);
+  gap: 1rem;
+  align-items: center;
   &:nth-child(even) {
     background: rgba(15, 23, 42, 0.7);
   }
+  &:hover {
+    background: rgba(15, 23, 42, 0.9);
+  }
+`;
+
+const DeleteButton = styled.button`
+  padding: 0.4rem 0.8rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+`;
+
+const ErrorMessage = styled.div`
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
 `;
 
 const Pill = styled.span`
@@ -216,8 +238,55 @@ const EmptyState = styled.div`
   color: #9ca3af;
 `;
 
+const formationSuggestions = [
+  // Formations scientifiques et techniques
+  'Licence Mathématiques',
+  'Licence Mathématiques-Informatique',
+  'Licence Informatique',
+  'Licence Physique',
+  'Licence Chimie',
+  'Licence Biologie',
+  'Licence Sciences de la vie',
+  'BUT Informatique',
+  'BUT GMP',
+  'BUT Génie Civil',
+  'BUT Mesures Physiques',
+  'BUT Génie Biologique',
+  'Prépa MPSI',
+  'Classe prépa MPSI',
+  'Classe prépa MP',
+  'Classe prépa PC',
+  'Classe prépa PSI',
+  'École d\'ingénieur post-bac',
+  // Formations économiques et commerciales
+  'Licence Économie',
+  'Licence Économie-Gestion',
+  'Licence Gestion',
+  'BUT GEA',
+  'Classe prépa ECS',
+  'Classe prépa ECE',
+  'École de commerce post-bac',
+  // Formations littéraires et juridiques
+  'Licence Droit',
+  'Licence Histoire',
+  'Licence Lettres',
+  'Licence Philosophie',
+  'BUT TC',
+  'Classe prépa Lettres',
+  'Classe prépa BL',
+  // Formations sciences humaines et sociales
+  'Licence Psychologie',
+  'Licence Sociologie',
+  'Licence Sciences de l\'éducation',
+  // Formations langues
+  'Licence Langues Étrangères Appliquées',
+  'Licence LLCE Anglais',
+  // Formations artistiques et communication
+  'Licence Arts',
+  'BUT Information-Communication',
+];
+
 const MesVoeux = () => {
-  const navigate = useNavigate();
   const { lycees: etablissementsDisponibles } = useLycees();
   const [form, setForm] = useState({
     formation: '',
@@ -226,18 +295,69 @@ const MesVoeux = () => {
     priorite: '1',
   });
   const [voeux, setVoeux] = useState([]);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
+    // Effacer l'erreur quand l'utilisateur modifie le formulaire
+    if (error) {
+      setError('');
+    }
   };
+
+  useEffect(() => {
+    // Charger les vœux sauvegardés
+    const saved = localStorage.getItem('scoolize_voeux');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const voeuxArray = Array.isArray(parsed) ? parsed : [];
+        // Ajouter un ID aux vœux qui n'en ont pas (rétrocompatibilité)
+        const voeuxWithId = voeuxArray.map(voeu => {
+          if (!voeu.id) {
+            return {
+              ...voeu,
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            };
+          }
+          return voeu;
+        });
+        setVoeux(voeuxWithId);
+        // Sauvegarder avec les IDs si on a modifié
+        if (voeuxWithId.length !== voeuxArray.length || voeuxArray.some(v => !v.id)) {
+          localStorage.setItem('scoolize_voeux', JSON.stringify(voeuxWithId));
+        }
+      } catch (e) {
+        setVoeux([]);
+      }
+    }
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError('');
+    
     if (!form.formation || !form.etablissement) {
-      return; // minimum requis
+      setError('Veuillez remplir au moins la formation et l\'établissement.');
+      return;
     }
-    setVoeux(prev => [...prev, form]);
+    
+    // Vérifier si la priorité est déjà utilisée
+    const prioriteExistante = voeux.find(v => v.priorite === form.priorite);
+    if (prioriteExistante) {
+      setError(`La priorité ${form.priorite} est déjà utilisée par "${prioriteExistante.formation}". Choisis une autre priorité.`);
+      return;
+    }
+    
+    const newVoeu = {
+      ...form,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+    };
+    const newVoeux = [...voeux, newVoeu];
+    setVoeux(newVoeux);
+    // Sauvegarder dans localStorage
+    localStorage.setItem('scoolize_voeux', JSON.stringify(newVoeux));
     // reset form
     setForm({
       formation: '',
@@ -247,28 +367,17 @@ const MesVoeux = () => {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('scoolize_user');
-    navigate('/');
+  const handleDelete = (id) => {
+    if (window.confirm('Es-tu sûr de vouloir supprimer ce vœu ?')) {
+      const newVoeux = voeux.filter(v => v.id !== id);
+      setVoeux(newVoeux);
+      localStorage.setItem('scoolize_voeux', JSON.stringify(newVoeux));
+    }
   };
 
   return (
     <PageContainer>
-      <Header>
-        <Logo>Scool<span>ize</span></Logo>
-        <Nav>
-          <NavButton onClick={handleLogout}>Déconnexion</NavButton>
-          <NavButton as="a" href="/notes">Mes notes</NavButton>
-          <NavButton $active>Mes vœux</NavButton>
-          <NavButton as="a" href="/profil">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="6" r="3" fill="currentColor"/>
-              <path d="M2 14c0-2.5 2.5-4 6-4s6 1.5 6 4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-            </svg>
-            Profil
-          </NavButton>
-        </Nav>
-      </Header>
+      <NavBar active="voeux" />
 
       <Main>
         <Card>
@@ -285,7 +394,14 @@ const MesVoeux = () => {
                 value={form.formation}
                 onChange={handleChange}
                 placeholder="Ex : Licence Économie-Gestion"
+                list="formation-options"
               />
+              <datalist id="formation-options">
+                {formationSuggestions.map((f, i) => (
+                  <option key={i} value={f} />
+                ))}
+              </datalist>
+              <Small>Tu peux saisir librement ou choisir dans la liste (datalist).</Small>
             </Field>
 
             <Field>
@@ -341,6 +457,8 @@ const MesVoeux = () => {
             </ButtonRow>
           </Form>
 
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+
           <TableWrapper>
             {voeux.length === 0 ? (
               <EmptyState>
@@ -353,17 +471,25 @@ const MesVoeux = () => {
                   <span>Établissement</span>
                   <span>Ville</span>
                   <span>Priorité</span>
+                  <span>Actions</span>
                 </TableHeader>
-                {voeux.map((v, i) => (
-                  <TableRow key={i}>
-                    <span>{v.formation}</span>
-                    <span>{v.etablissement}</span>
-                    <span>{v.ville || '-'}</span>
-                    <span>
-                      <Pill>#{v.priorite}</Pill>
-                    </span>
-                  </TableRow>
-                ))}
+                {voeux
+                  .sort((a, b) => Number(a.priorite) - Number(b.priorite))
+                  .map((v) => (
+                    <TableRow key={v.id}>
+                      <span>{v.formation}</span>
+                      <span>{v.etablissement}</span>
+                      <span>{v.ville || '-'}</span>
+                      <span>
+                        <Pill>#{v.priorite}</Pill>
+                      </span>
+                      <span>
+                        <DeleteButton onClick={() => handleDelete(v.id)}>
+                          🗑️ Supprimer
+                        </DeleteButton>
+                      </span>
+                    </TableRow>
+                  ))}
               </>
             )}
           </TableWrapper>

@@ -8,6 +8,7 @@ import AccueilScoolize from './components/AccueilScoolize';
 import MesNotes from './components/MesNotes';
 import MesVoeux from './components/MesVoeux';
 import Profil from './components/Profil';
+import ResultatsAlgo from './components/ResultatsAlgo';
 
 function App() {
     return (
@@ -17,6 +18,7 @@ function App() {
                 <Route path="/notes" element={<MesNotes />} />
                 <Route path="/voeux" element={<MesVoeux />} />
                 <Route path="/profil" element={<Profil />} />
+                <Route path="/resultats" element={<ResultatsAlgo />} />
             </Routes>
         </Router>
     );
