@@ -176,7 +176,7 @@ const Link = styled.a`
   &:hover { text-decoration: underline; }
 `;
 
-const AccueilScoolize = () => {
+const AccueilScoolize = ({ onAuthenticated = () => {} }) => {
   const { lycees: lyceesDisponibles, loading } = useLycees();
   const [mode, setMode] = useState('inscription');
   const [data, setData] = useState({ email: '', nom: '', prenom: '', dateNaissance: '', etablissementOrigine: '', motDePasse: '' });
@@ -216,6 +216,9 @@ const AccueilScoolize = () => {
   const submit = (e) => {
     e.preventDefault();
     console.log(mode === 'inscription' ? '📝 Inscription:' : '🔐 Connexion:', data);
+    if (mode === 'connexion') {
+      onAuthenticated(); // simule une connexion réussie pour afficher les fonctionnalités réservées
+    }
   };
 
   return (
