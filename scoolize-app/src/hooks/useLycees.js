@@ -8,31 +8,32 @@ export const useLycees = () => {
     useEffect(() => {
         const loadLycees = async () => {
             try {
-                const response = await fetch('/data/parcoursup.csv');
-                const csvText = await response.text();
+                const res = await fetch('/data/parcoursup.csv');
+                const csvText = await res.text();
 
                 Papa.parse(csvText, {
                     header: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        const etablissements = new Set();
+                        const etabs = new Set();
                         results.data.forEach(row => {
                             const nom = row["Nom de l'établissement"];
                             if (nom && nom.trim() && nom.length > 3) {
+                                // nettoyer les guillemets et virgules bizarres
                                 const cleaned = nom.trim().replace(/^"|"$/g, '');
                                 if (cleaned && !cleaned.startsWith(',')) {
-                                    etablissements.add(cleaned);
+                                    etabs.add(cleaned);
                                 }
                             }
                         });
-                        const lyceesArray = Array.from(etablissements).sort();
-                        console.log(`✅ ${lyceesArray.length} établissements chargés depuis le CSV`);
-                        setLycees(lyceesArray);
+                        const lyceesList = Array.from(etabs).sort();
+                        console.log(`${lyceesList.length} établissements chargés`);
+                        setLycees(lyceesList);
                         setLoading(false);
                     }
                 });
-            } catch (error) {
-                console.error('Erreur lors du chargement des lycées:', error);
+            } catch (err) {
+                console.error('erreur chargement CSV', err);
                 setLoading(false);
             }
         };
