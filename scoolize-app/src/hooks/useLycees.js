@@ -19,7 +19,6 @@ export const useLycees = () => {
                         results.data.forEach(row => {
                             const nom = row["Nom de l'établissement"];
                             if (nom && nom.trim() && nom.length > 3) {
-                                // nettoyer les guillemets et virgules bizarres
                                 const cleaned = nom.trim().replace(/^"|"$/g, '');
                                 if (cleaned && !cleaned.startsWith(',')) {
                                     etabs.add(cleaned);
@@ -27,13 +26,11 @@ export const useLycees = () => {
                             }
                         });
                         const lyceesList = Array.from(etabs).sort();
-                        console.log(`${lyceesList.length} établissements chargés`);
                         setLycees(lyceesList);
                         setLoading(false);
                     }
                 });
             } catch (err) {
-                console.error('erreur chargement CSV', err);
                 setLoading(false);
             }
         };

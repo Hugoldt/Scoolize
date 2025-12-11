@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useLycees } from '../hooks/useLycees';
 import { useEtablissements } from '../hooks/useEtablissements';
+import { calculerChanceAdmission } from '../utils/calculAdmission';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -183,7 +184,7 @@ const TableWrapper = styled.div`
 
 const TableHeader = styled.div`
   display: grid;
-  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr auto;
+  grid-template-columns: 1.2fr 1.3fr 0.9fr 0.9fr 1fr auto;
   gap: 1rem;
   padding: 0.85rem 1.2rem;
   font-size: 0.8rem;
@@ -227,9 +228,28 @@ const StatusBadge = styled.span`
     '#94a3b8'};
 `;
 
+const ChanceBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: ${p => 
+    p.$pourcentage >= 70 ? 'rgba(34, 197, 94, 0.2)' :
+    p.$pourcentage >= 50 ? 'rgba(251, 191, 36, 0.2)' :
+    p.$pourcentage >= 30 ? 'rgba(249, 115, 22, 0.2)' :
+    'rgba(239, 68, 68, 0.2)'};
+  color: ${p => 
+    p.$pourcentage >= 70 ? '#22c55e' :
+    p.$pourcentage >= 50 ? '#fbbf24' :
+    p.$pourcentage >= 30 ? '#f97316' :
+    '#ef4444'};
+`;
+
 const TableRow = styled.div`
   display: grid;
-  grid-template-columns: 1.4fr 1.4fr 1.2fr 0.7fr auto;
+  grid-template-columns: 1.2fr 1.3fr 0.9fr 0.9fr 1fr auto;
   gap: 1rem;
   padding: 0.85rem 1.2rem;
   font-size: 0.9rem;
@@ -345,6 +365,7 @@ const MesVoeux = () => {
   });
   const [voeux, setVoeux] = useState([]);
   const [ecoles, setEcoles] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [hasSession, setHasSession] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [searchEcole, setSearchEcole] = useState('');
@@ -376,6 +397,19 @@ const MesVoeux = () => {
     const loadData = async () => {
       const sessionRes = await supabase.auth.getSession();
       setHasSession(!!sessionRes.data.session);
+
+      const userId = sessionRes.data?.session?.user?.id;
+      if (userId) {
+        const { data: notesData } = await supabase
+          .from('notes')
+          .select('*')
+          .eq('etudiant_id', userId)
+          .order('created_at', { ascending: true });
+        
+        if (notesData) {
+          setNotes(notesData);
+        }
+      }
 
       const { data: ecolesData, error: ecolesError } = await supabase
         .from('ecoles')
@@ -658,25 +692,40 @@ const MesVoeux = () => {
                   <span>Formation</span>
                   <span>Priorité</span>
                   <span>Statut</span>
+                  <span>Chance</span>
                   <RefreshButton onClick={loadVoeux} title="Rafraîchir">
                     ↻
                   </RefreshButton>
                 </TableHeader>
-                {voeux.map((v, i) => (
-                  <TableRow key={i}>
-                    <span>{v.ecoles?.nom_ecole || '-'}</span>
-                    <span>{v.formation_nom}</span>
-                    <span>
-                      <Pill>#{v.classement_voeux}</Pill>
-                    </span>
-                    <span>
-                      <StatusBadge $status={v.statut || 'En attente'}>
-                        {v.statut || 'En attente'}
-                      </StatusBadge>
-                    </span>
-                    <span></span>
-                  </TableRow>
-                ))}
+                {voeux.map((v, i) => {
+                  const chance = calculerChanceAdmission(notes, v, v.ecoles);
+                  return (
+                    <TableRow key={i}>
+                      <span>{v.ecoles?.nom_ecole || '-'}</span>
+                      <span>{v.formation_nom}</span>
+                      <span>
+                        <Pill>#{v.classement_voeux}</Pill>
+                      </span>
+                      <span>
+                        <StatusBadge $status={v.statut || 'En attente'}>
+                          {v.statut || 'En attente'}
+                        </StatusBadge>
+                      </span>
+                      <span>
+                        {notes.length > 0 ? (
+                          <ChanceBadge $pourcentage={chance.pourcentage}>
+                            {chance.pourcentage}%
+                          </ChanceBadge>
+                        ) : (
+                          <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>
+                            Pas de notes
+                          </span>
+                        )}
+                      </span>
+                      <span></span>
+                    </TableRow>
+                  );
+                })}
               </>
             )}
           </TableWrapper>

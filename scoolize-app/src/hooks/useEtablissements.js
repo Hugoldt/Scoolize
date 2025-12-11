@@ -31,13 +31,11 @@ export const useEtablissements = () => {
             setEtablissements(etabsList);
             setLoading(false);
           },
-          error: (err) => {
-            console.error('Erreur parsing CSV établissements', err);
+          error: () => {
             setLoading(false);
           }
         });
-      } catch (err) {
-        console.error('Erreur chargement établissements', err);
+      } catch {
         setLoading(false);
       }
     };

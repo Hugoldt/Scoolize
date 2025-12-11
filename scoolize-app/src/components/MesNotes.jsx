@@ -181,7 +181,7 @@ const TableWrapper = styled.div`
 
 const TableHeader = styled.div`
   display: grid;
-  grid-template-columns: 1.2fr 1.5fr 1.2fr 0.7fr;
+  grid-template-columns: 1.2fr 1.5fr 1.2fr 0.7fr 0.5fr;
   padding: 0.85rem 1.2rem;
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -192,12 +192,29 @@ const TableHeader = styled.div`
 
 const TableRow = styled.div`
   display: grid;
-  grid-template-columns: 1.2fr 1.5fr 1.2fr 0.7fr;
+  grid-template-columns: 1.2fr 1.5fr 1.2fr 0.7fr 0.5fr;
   padding: 0.85rem 1.2rem;
   font-size: 0.9rem;
   border-top: 1px solid rgba(31, 41, 55, 0.8);
+  align-items: center;
   &:nth-child(even) {
     background: rgba(15, 23, 42, 0.7);
+  }
+`;
+
+const DeleteButton = styled.button`
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
   }
 `;
 
@@ -373,6 +390,21 @@ const MesNotes = () => {
     return { good: false, medium: false };
   };
 
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm('Es-tu sûr de vouloir supprimer cette note ?')) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', noteId);
+
+    if (!error) {
+      setNotes(prev => prev.filter(n => n.id !== noteId));
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -493,11 +525,12 @@ const MesNotes = () => {
                   <span>Année</span>
                   <span>Matière</span>
                   <span>Note</span>
+                  <span></span>
                 </TableHeader>
                 {notes.map((n, i) => {
                   const status = getNoteStatus(n.note);
                   return (
-                    <TableRow key={i}>
+                    <TableRow key={n.id || i}>
                       <span>
                         <Pill>{n.niveau_scolaire || 'Terminale'}</Pill>
                       </span>
@@ -507,6 +540,11 @@ const MesNotes = () => {
                         <NotePill $good={status.good} $medium={status.medium}>
                           {n.note}
                         </NotePill>
+                      </span>
+                      <span>
+                        <DeleteButton onClick={() => handleDeleteNote(n.id)}>
+                          Supprimer
+                        </DeleteButton>
                       </span>
                     </TableRow>
                   );
