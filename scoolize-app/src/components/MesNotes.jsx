@@ -218,6 +218,29 @@ const DeleteButton = styled.button`
   }
 `;
 
+const EditButton = styled.button`
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.1);
+  color: #60a5fa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 0.5rem;
+  &:hover {
+    background: rgba(37, 99, 235, 0.2);
+    border-color: rgba(37, 99, 235, 0.5);
+  }
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
 const Pill = styled.span`
   display: inline-flex;
   align-items: center;
@@ -296,6 +319,7 @@ const MesNotes = () => {
   });
   const [notes, setNotes] = useState([]);
   const [hasSession, setHasSession] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -359,28 +383,66 @@ const MesNotes = () => {
 
     const userId = sessionData.session.user.id;
 
-    const newNote = {
-      etudiant_id: userId,
-      niveau_scolaire: form.niveau,
-      matiere: form.matiere,
-      note: noteValue,
-      annee_scolaire: parseInt(form.annee, 10) || null,
-    };
+    if (editingNoteId) {
+      const { data, error } = await supabase
+        .from('notes')
+        .update({
+          matiere: form.matiere,
+          note: noteValue,
+          annee_scolaire: parseInt(form.annee, 10) || null,
+        })
+        .eq('id', editingNoteId)
+        .select();
 
-    const { data, error } = await supabase
-      .from('notes')
-      .insert([newNote])
-      .select();
+      if (error) {
+        alert(`Erreur lors de la modification de la note: ${error.message}`);
+        return;
+      }
 
-    if (error) {
-      alert(`Erreur lors de l'ajout de la note: ${error.message}`);
-      return;
+      if (data && data.length > 0) {
+        setNotes(prev => prev.map(n => n.id === editingNoteId ? data[0] : n));
+        setForm({ niveau: 'terminale', matiere: '', note: '', annee: new Date().getFullYear().toString() });
+        setEditingNoteId(null);
+      }
+    } else {
+      const newNote = {
+        etudiant_id: userId,
+        niveau_scolaire: form.niveau,
+        matiere: form.matiere,
+        note: noteValue,
+        annee_scolaire: parseInt(form.annee, 10) || null,
+      };
+
+      const { data, error } = await supabase
+        .from('notes')
+        .insert([newNote])
+        .select();
+
+      if (error) {
+        alert(`Erreur lors de l'ajout de la note: ${error.message}`);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setNotes(prev => [...prev, data[0]]);
+        setForm(prev => ({ ...prev, matiere: '', note: '' }));
+      }
     }
+  };
 
-    if (data && data.length > 0) {
-      setNotes(prev => [...prev, data[0]]);
-      setForm(prev => ({ ...prev, matiere: '', note: '' }));
-    }
+  const handleEditNote = (note) => {
+    setForm({
+      niveau: note.niveau_scolaire || 'terminale',
+      matiere: note.matiere || '',
+      note: note.note?.toString() || '',
+      annee: note.annee_scolaire?.toString() || new Date().getFullYear().toString(),
+    });
+    setEditingNoteId(note.id);
+  };
+
+  const handleCancelEdit = () => {
+    setForm({ niveau: 'terminale', matiere: '', note: '', annee: new Date().getFullYear().toString() });
+    setEditingNoteId(null);
   };
 
   const getNoteStatus = (note) => {
@@ -507,9 +569,20 @@ const MesNotes = () => {
             </Field>
 
             <ButtonRow>
-              <Button type="submit">
-                + Ajouter la note
-              </Button>
+              {editingNoteId ? (
+                <>
+                  <Button type="button" onClick={handleCancelEdit} style={{ background: '#6b7280', marginRight: '0.5rem' }}>
+                    Annuler
+                  </Button>
+                  <Button type="submit">
+                    Modifier la note
+                  </Button>
+                </>
+              ) : (
+                <Button type="submit">
+                  + Ajouter la note
+                </Button>
+              )}
             </ButtonRow>
           </Form>
 
@@ -542,9 +615,14 @@ const MesNotes = () => {
                         </NotePill>
                       </span>
                       <span>
-                        <DeleteButton onClick={() => handleDeleteNote(n.id)}>
-                          Supprimer
-                        </DeleteButton>
+                        <ButtonGroup>
+                          <EditButton onClick={() => handleEditNote(n)}>
+                            Modifier
+                          </EditButton>
+                          <DeleteButton onClick={() => handleDeleteNote(n.id)}>
+                            Supprimer
+                          </DeleteButton>
+                        </ButtonGroup>
                       </span>
                     </TableRow>
                   );

@@ -1,16 +1,21 @@
 const matieresParFormation = {
-  "mathématiques": ["Mathématiques"],
-  "math": ["Mathématiques"],
+  "mathématiques": ["Mathématiques", "Physique-Chimie"],
+  "math": ["Mathématiques", "Physique-Chimie"],
   "physique": ["Mathématiques", "Physique-Chimie"],
   "informatique": ["Mathématiques", "Physique-Chimie"],
+  "ingénieur": ["Mathématiques", "Physique-Chimie"],
+  "ingénierie": ["Mathématiques", "Physique-Chimie"],
+  "sciences": ["Mathématiques", "Physique-Chimie", "SVT"],
   "économie": ["SES", "Mathématiques"],
   "gestion": ["SES", "Mathématiques"],
+  "commerce": ["SES", "Mathématiques"],
   "svt": ["SVT", "Physique-Chimie"],
   "biologie": ["SVT", "Physique-Chimie"],
-  "chimie": ["Physique-Chimie", "SVT"],
+  "chimie": ["Physique-Chimie", "Mathématiques"],
   "histoire": ["Histoire-Géographie", "Français"],
   "géographie": ["Histoire-Géographie"],
   "lettres": ["Français", "Philosophie"],
+  "littéraire": ["Français", "Philosophie", "Histoire-Géographie"],
   "philosophie": ["Philosophie", "Français"],
   "langues": ["Anglais", "Espagnol"],
   "anglais": ["Anglais"],
@@ -24,14 +29,45 @@ function detecterSelectivite(nomEcole) {
   
   if (nomLower.includes("polytechnique") || 
       nomLower.includes("henri iv") ||
+      nomLower.includes("henri-iv") ||
       nomLower.includes("henry iv") ||
+      nomLower.includes("henry-iv") ||
+      nomLower.includes("henri 4") ||
+      nomLower.includes("henri-4") ||
       nomLower.includes("hec") ||
       nomLower.includes("sciences po") ||
       nomLower.includes("normale sup") ||
+      nomLower.includes("ens ") ||
       nomLower.includes("centrale") ||
       nomLower.includes("essec") ||
-      nomLower.includes("escp")) {
+      nomLower.includes("escp") ||
+      nomLower.includes("louis le grand") ||
+      nomLower.includes("louis-le-grand") ||
+      nomLower.includes("saint-louis") ||
+      nomLower.includes("saint louis") ||
+      nomLower.includes("mines") ||
+      nomLower.includes("ponts") ||
+      nomLower.includes("supaéro") ||
+      nomLower.includes("supaero") ||
+      nomLower.includes("psl") ||
+      nomLower.includes("sorbonne") && nomLower.includes("licence sélective")) {
     return "tres_selectif";
+  }
+  
+  if (nomLower.includes("epita") ||
+      nomLower.includes("insa") ||
+      nomLower.includes("utc") ||
+      nomLower.includes("ecole centrale") ||
+      nomLower.includes("école d'ingénieur") ||
+      nomLower.includes("ecole d'ingenieur")) {
+    return "selectif";
+  }
+  
+  if (nomLower.includes("epitech") ||
+      nomLower.includes("epsi") ||
+      nomLower.includes("supinfo") ||
+      nomLower.includes("42")) {
+    return "moyen";
   }
   
   if (nomLower.includes("bts") || 
@@ -81,13 +117,25 @@ function trouverMatieresPertinentes(formationNom) {
 
 function convertirEnPourcentage(score, selectivite) {
   if (selectivite === "tres_selectif") {
-    if (score >= 17) return 75;
-    if (score >= 16) return 55;
-    if (score >= 15) return 40;
-    if (score >= 14) return 25;
-    if (score >= 13) return 15;
-    if (score >= 12) return 8;
-    return 3;
+    if (score >= 18) return 70;
+    if (score >= 17) return 55;
+    if (score >= 16) return 40;
+    if (score >= 15) return 25;
+    if (score >= 14) return 15;
+    if (score >= 13) return 8;
+    if (score >= 12) return 5;
+    return 2;
+  }
+  
+  if (selectivite === "selectif") {
+    if (score >= 17) return 80;
+    if (score >= 16) return 70;
+    if (score >= 15) return 60;
+    if (score >= 14) return 50;
+    if (score >= 13) return 40;
+    if (score >= 12) return 30;
+    if (score >= 11) return 20;
+    return 10;
   }
   
   if (selectivite === "moyen") {
@@ -137,9 +185,19 @@ export function calculerChanceAdmission(notes, voeu, ecole) {
       : moyenneGenerale;
     
     if (moyenneMatiere > 0) {
-      score = (moyenneGenerale * 0.4) + (moyenneMatiere * 0.6);
+      score = (moyenneGenerale * 0.35) + (moyenneMatiere * 0.65);
     } else {
-      score = moyenneGenerale * 0.7;
+      score = moyenneGenerale * 0.65;
+    }
+  } else if (selectivite === "selectif") {
+    const moyenneMatiere = matieresPertinentes.length > 0 
+      ? calculerMoyenneMatiere(notes, matieresPertinentes)
+      : moyenneGenerale;
+    
+    if (moyenneMatiere > 0) {
+      score = (moyenneGenerale * 0.5) + (moyenneMatiere * 0.5);
+    } else {
+      score = moyenneGenerale * 0.85;
     }
   } else if (selectivite === "moyen") {
     const moyenneMatiere = matieresPertinentes.length > 0 

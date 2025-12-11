@@ -359,17 +359,38 @@ const AccueilScoolize = () => {
             }]);
 
           if (insertError) {
-            const { error: rpcError } = await supabase.rpc('insert_ecole_profile', {
-              p_id: user.id,
-              p_email: data.email,
-              p_nom_ecole: data.nomEcole,
-              p_formation: data.formation || null,
-            });
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-            if (rpcError) {
-              setErrorMessage("Compte créé mais le profil école n'a pas pu être enregistré. Erreur: " + rpcError.message);
-              setLoadingSubmit(false);
-              return;
+            const { error: retryError } = await supabase
+              .from('ecoles')
+              .insert([{
+                id: user.id,
+                email: data.email,
+                nom_ecole: data.nomEcole,
+                formation: data.formation || null,
+              }]);
+
+            if (retryError) {
+              const { error: rpcError } = await supabase.rpc('insert_ecole_profile', {
+                p_id: user.id,
+                p_email: data.email,
+                p_nom_ecole: data.nomEcole,
+                p_formation: data.formation || null,
+              });
+
+              if (rpcError) {
+                const { data: existingProfile } = await supabase
+                  .from('ecoles')
+                  .select('id')
+                  .eq('id', user.id)
+                  .single();
+
+                if (!existingProfile) {
+                  setErrorMessage("Compte créé mais le profil école n'a pas pu être enregistré. Réessaye de te connecter.");
+                  setLoadingSubmit(false);
+                  return;
+                }
+              }
             }
           }
 
@@ -415,19 +436,42 @@ const AccueilScoolize = () => {
             }]);
 
           if (insertError) {
-            const { error: rpcError } = await supabase.rpc('insert_etudiant_profile', {
-              p_id: user.id,
-              p_email: data.email,
-              p_nom: data.nom,
-              p_prenom: data.prenom,
-              p_date_naissance: data.dateNaissance || null,
-              p_lycee_origine: data.etablissementOrigine || null,
-            });
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-            if (rpcError) {
-              setErrorMessage("Compte créé mais le profil n'a pas pu être enregistré. Erreur: " + rpcError.message);
-              setLoadingSubmit(false);
-              return;
+            const { error: retryError } = await supabase
+              .from('etudiants')
+              .insert([{
+                id: user.id,
+                email: data.email,
+                nom: data.nom,
+                prenom: data.prenom,
+                date_naissance: data.dateNaissance || null,
+                lycee_origine: data.etablissementOrigine || null,
+              }]);
+
+            if (retryError) {
+              const { error: rpcError } = await supabase.rpc('insert_etudiant_profile', {
+                p_id: user.id,
+                p_email: data.email,
+                p_nom: data.nom,
+                p_prenom: data.prenom,
+                p_date_naissance: data.dateNaissance || null,
+                p_lycee_origine: data.etablissementOrigine || null,
+              });
+
+              if (rpcError) {
+                const { data: existingProfile } = await supabase
+                  .from('etudiants')
+                  .select('id')
+                  .eq('id', user.id)
+                  .single();
+
+                if (!existingProfile) {
+                  setErrorMessage("Compte créé mais le profil n'a pas pu être enregistré. Réessaye de te connecter.");
+                  setLoadingSubmit(false);
+                  return;
+                }
+              }
             }
           }
 

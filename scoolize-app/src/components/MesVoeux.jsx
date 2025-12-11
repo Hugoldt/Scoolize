@@ -184,7 +184,7 @@ const TableWrapper = styled.div`
 
 const TableHeader = styled.div`
   display: grid;
-  grid-template-columns: 1.2fr 1.3fr 0.9fr 0.9fr 1fr auto;
+  grid-template-columns: 1.2fr 1.3fr 0.9fr 0.9fr 1fr auto auto;
   gap: 1rem;
   padding: 0.85rem 1.2rem;
   font-size: 0.8rem;
@@ -249,7 +249,7 @@ const ChanceBadge = styled.span`
 
 const TableRow = styled.div`
   display: grid;
-  grid-template-columns: 1.2fr 1.3fr 0.9fr 0.9fr 1fr auto;
+  grid-template-columns: 1.2fr 1.3fr 0.9fr 0.9fr 1fr auto auto;
   gap: 1rem;
   padding: 0.85rem 1.2rem;
   font-size: 0.9rem;
@@ -257,6 +257,22 @@ const TableRow = styled.div`
   align-items: center;
   &:nth-child(even) {
     background: rgba(15, 23, 42, 0.7);
+  }
+`;
+
+const DeleteButton = styled.button`
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
   }
 `;
 
@@ -268,6 +284,22 @@ const Pill = styled.span`
   font-size: 0.75rem;
   background: rgba(37, 99, 235, 0.15);
   color: #bfdbfe;
+`;
+
+const DeleteVoeuButton = styled.button`
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
 `;
 
 const EmptyState = styled.div`
@@ -578,6 +610,23 @@ const MesVoeux = () => {
     navigate('/');
   };
 
+  const handleDeleteVoeu = async (voeuId) => {
+    if (!window.confirm('Es-tu sûr de vouloir supprimer ce vœu ?')) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('voeux')
+      .delete()
+      .eq('id', voeuId);
+
+    if (!error) {
+      setVoeux(prev => prev.filter(v => v.id !== voeuId));
+    } else {
+      alert("Erreur lors de la suppression du vœu.");
+    }
+  };
+
   return (
     <PageContainer>
       <Header>
@@ -603,7 +652,7 @@ const MesVoeux = () => {
         <Card>
           <Title>Mes vœux</Title>
           <Subtitle>
-            Ajoute les formations que tu vises et leur priorité. Ces données sont synchronisées avec ta table Supabase `voeux`.
+            Ajoute les formations que tu vises et leur priorité.
           </Subtitle>
 
           <Form onSubmit={handleSubmit}>
@@ -693,6 +742,7 @@ const MesVoeux = () => {
                   <span>Priorité</span>
                   <span>Statut</span>
                   <span>Chance</span>
+                  <span></span>
                   <RefreshButton onClick={loadVoeux} title="Rafraîchir">
                     ↻
                   </RefreshButton>
@@ -700,7 +750,7 @@ const MesVoeux = () => {
                 {voeux.map((v, i) => {
                   const chance = calculerChanceAdmission(notes, v, v.ecoles);
                   return (
-                    <TableRow key={i}>
+                    <TableRow key={v.id || i}>
                       <span>{v.ecoles?.nom_ecole || '-'}</span>
                       <span>{v.formation_nom}</span>
                       <span>
@@ -721,6 +771,11 @@ const MesVoeux = () => {
                             Pas de notes
                           </span>
                         )}
+                      </span>
+                      <span>
+                        <DeleteVoeuButton onClick={() => handleDeleteVoeu(v.id)}>
+                          Supprimer
+                        </DeleteVoeuButton>
                       </span>
                       <span></span>
                     </TableRow>
